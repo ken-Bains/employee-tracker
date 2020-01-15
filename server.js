@@ -12,10 +12,9 @@ var connection = mysql.createConnection({
 connection.connect(err => {
     if(err) throw err
     console.log("connected");
-    // startPrompts();\
-    getDepartments();
+    startPrompts();
 });
-
+//----------Inital prompts from inqurier
 function startPrompts() {
     inquirer.prompt([
         {
@@ -40,7 +39,7 @@ function startPrompts() {
         }
     });
 };
-
+//---------------------------add department functionality
 function addDepartment() {
     inquirer.prompt([
         {
@@ -55,8 +54,14 @@ function addDepartment() {
         })
     });
 };
-
+//------------------------ add role functionality
 function addRole() {
+    connection.query("SELECT * FROM departments", function(err, res){
+        addRolePrompts(res);
+    })
+};
+
+function addRolePrompts(choicesArray) {
     inquirer.prompt([
         {
             type: "input",
@@ -72,18 +77,24 @@ function addRole() {
             type: "list",
             name: "rolesDepartment",
             message: "What department is under?",
-            choices: getDepartments()
+            choices: choicesArray
         }
-    ])
-};
+    ]).then(function(res) {
+        let departmentId;
+        choicesArray.forEach(element => {
+            if(res.rolesDepartment === element.name){
+                departmentId = element.id;
+            }
+        });
 
-function getDepartments() {
-    var departmentArr = [];
-
-    connection.query("SELECT * FROM departments", function(err, res){
-        if(err) throw err;
-        console.log(res);
+        connection.query(`INSERT INTO roles SET ?`, {
+            title: res.roleTitle,
+            salary: res.roleSalary,
+            department_id: departmentId
+        }, function(err, returns){
+            if(err) throw err;
+            console.log(returns);
+        })
     })
-    console.log(departmentArr);
-    // return departmentArr
 };
+

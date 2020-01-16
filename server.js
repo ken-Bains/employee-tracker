@@ -1,5 +1,7 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
+const cTable = require('console.table');
+
 
 var connection = mysql.createConnection({
     host: "localhost",
@@ -22,7 +24,7 @@ function startPrompts() {
             type: "list",
             name: "openingPromptAction",
             message: "what Would you like to do?",
-            choices: ["Add Department", "Add Role", "Add Employee", "View all employees", "View all roles", "View all departments"]
+            choices: ["Add Department", "Add Role", "Add Employee", "View all employees", "View all roles", "View all departments", "Update Employees Role"]
 
         }
     ]).then(function(res){
@@ -44,6 +46,10 @@ function startPrompts() {
                 break;
             case "View all departments":
                 queryAllDepartments("viewDepartments");
+                break;
+            case "Update Employees Role":
+                // queryAllDepartments("viewDepartments");
+                // new function add function for manager and role or seperate
                 break;
 
         }
@@ -179,31 +185,41 @@ function queryAllDepartments(functionFlag) {
                 queryAllMangers(res);
                 break;
             case "viewDepartments":
-                // console table to show all deparments
+                console.table(res);
                 break;
         }
     })
 };
 
 function queryAllRoles(functionFlag) {
-    connection.query("SELECT * FROM roles", function(err, res){
+    connection.query("SELECT roles.id, roles.title, roles.salary FROM roles", function(err, res){
         if(err) throw err;
         switch (functionFlag) {
             case "addEmployee":
                 queryAllMangers(res);
                 break;
             case "viewRoles":
-                //create table for console 
+                console.table(res);
                 break;
         }
     })
 };
 
 function queryAllEmployees(functionFlag) {
-    connection.query("SELECT * FROM employees", function(err, resp) {
+    var queryString = `
+        SELECT employees.id, CONCAT_WS(" ", employees.first_name, employees.last_name) AS name ,roles.title, roles.salary, departments.name AS department, CONCAT_WS(" ", e.first_name, e.last_name) AS manager
+        FROM employees
+        INNER JOIN roles
+        ON employees.role_id = roles.id
+        LEFT JOIN departments
+        ON roles.department_id = departments.id
+        LEFT JOIN employees e
+        ON employees.manager_id = e.id
+    `
+    connection.query(queryString, function(err, resp) {
         switch (functionFlag) {
             case "viewEmployees":
-                //console table to show all employees
+                console.table(resp);
                 break;
 
         }

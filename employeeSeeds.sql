@@ -21,8 +21,10 @@ CREATE TABLE employees(
     first_name varchar(30),
     last_name varchar(30),
     role_id int,
+    manager_id int,
     PRIMARY KEY (id),
-    FOREIGN KEY  (role_id) REFERENCES roles(id)
+    FOREIGN KEY  (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+	FOREIGN KEY  (manager_id) REFERENCES employees(id) ON DELETE CASCADE
 );
 
 INSERT INTO departments (name)

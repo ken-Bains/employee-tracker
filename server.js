@@ -48,8 +48,7 @@ function startPrompts() {
                 queryAllDepartments("viewDepartments");
                 break;
             case "Update Employees Role":
-                // queryAllDepartments("viewDepartments");
-                // new function add function for manager and role or seperate
+                queryAllEmployees("updateRole")
                 break;
 
         }
@@ -191,7 +190,7 @@ function queryAllDepartments(functionFlag) {
     })
 };
 
-function queryAllRoles(functionFlag) {
+function queryAllRoles(functionFlag, employees) {
     connection.query("SELECT roles.id, roles.title, roles.salary FROM roles", function(err, res){
         if(err) throw err;
         switch (functionFlag) {
@@ -200,6 +199,9 @@ function queryAllRoles(functionFlag) {
                 break;
             case "viewRoles":
                 console.table(res);
+                break;
+            case "updateRole":
+                updateEmployee("updateRole", employees, res);
                 break;
         }
     })
@@ -221,7 +223,52 @@ function queryAllEmployees(functionFlag) {
             case "viewEmployees":
                 console.table(resp);
                 break;
+            case "updateRole":
+                queryAllRoles("updateRole", resp);
+                break;
 
         }
     });
 };
+
+function updateEmployee(flag, employeesList, rolesList) {
+    var employeeNames = employeesList.map(element => {
+        return element.name
+    });
+    var rolesArray = rolesList.map(element => {
+        return element.title
+    });
+    inquirer.prompt([
+        {
+            name: "employeeProfile",
+            message: "which employee would you like to update?",
+            type: "rawlist",
+            choices: employeeNames
+        },
+        {
+            name: "rolesProfile",
+            message: "What is the employees new role?",
+            type: "rawlist",
+            choices: rolesArray
+        }
+    ]).then(function(resp) {
+        var employeeId;
+        var roleId;
+        employeesList.forEach(element => {
+            if(element.name === resp.employeeProfile){
+                employeeId = element.id;
+            }
+        });
+        rolesList.forEach(element => {
+            if(element.title === resp.rolesProfile){
+                roleId = element.id;
+            }
+        });
+        connection.query(`UPDATE employees SET role_id=${roleId} WHERE id=${employeeId}`, function(err, response) {
+            if(err) throw err;
+            console.log(response);
+        })
+    }).catch(function(err){
+        if(err) throw err;
+    })
+}

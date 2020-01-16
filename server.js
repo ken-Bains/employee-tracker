@@ -54,7 +54,22 @@ function startPrompts() {
         }
     });
 };
-
+function stopProgram(){
+    inquirer.prompt({
+        name: "stopOption",
+        message: "would you like to stop or do another task?",
+        choices: ["stop", "Keep going"],
+        type: "list"
+    }).then(function(res) {
+        if(res.stopOption === "stop") {
+            connection.end()
+        } else {
+            startPrompts();
+        }
+    }).catch(function(err){
+        if(err) throw err;
+    });
+}
 //--------------------------------------add DEPARTMENT functionality
 function addDepartment() {
     inquirer.prompt([
@@ -66,7 +81,7 @@ function addDepartment() {
     ]).then(function(res){
         connection.query("INSERT INTO departments SET ?", {name: res.departmentName}, function(err){
             if(err) throw err;
-
+            stopProgram();
         })
     });
 };
@@ -107,6 +122,8 @@ function addRolePrompts(choicesArray) {
         }, function(err, returns){
             if(err) throw err;
         })
+        stopProgram();
+
     })
 };
 
@@ -158,79 +175,13 @@ function addEmployeePrompts(roles, managers) {
             last_name: res.employeesLastName,
             role_id: roleId,
             manager_id: managerId
-        })
+        });
+        stopProgram();
+
     }).catch(err => console.error(err ,"ssa"));
 }
 
-//--------------------------------------- querys of database
-function queryAllMangers(roles) {
-    connection.query("SELECT * FROM roles WHERE title='manager'", function(err, res){
-        if(err) throw err;
-        connection.query(`SELECT * FROM employees WHERE role_id=${res[0].id}`, function(err, resp){
-            if(err) throw err
-            addEmployeePrompts(roles, resp);
-        });
-    })
-};
-
-function queryAllDepartments(functionFlag) {
-    connection.query("SELECT * FROM departments", function(err, res){
-        if(err) throw err;
-        switch (functionFlag) {
-            case "addRoles":
-                addRolePrompts(res);
-                break;
-            case "addEmployee":
-                queryAllMangers(res);
-                break;
-            case "viewDepartments":
-                console.table(res);
-                break;
-        }
-    })
-};
-
-function queryAllRoles(functionFlag, employees) {
-    connection.query("SELECT roles.id, roles.title, roles.salary FROM roles", function(err, res){
-        if(err) throw err;
-        switch (functionFlag) {
-            case "addEmployee":
-                queryAllMangers(res);
-                break;
-            case "viewRoles":
-                console.table(res);
-                break;
-            case "updateRole":
-                updateEmployee("updateRole", employees, res);
-                break;
-        }
-    })
-};
-
-function queryAllEmployees(functionFlag) {
-    var queryString = `
-        SELECT employees.id, CONCAT_WS(" ", employees.first_name, employees.last_name) AS name ,roles.title, roles.salary, departments.name AS department, CONCAT_WS(" ", e.first_name, e.last_name) AS manager
-        FROM employees
-        INNER JOIN roles
-        ON employees.role_id = roles.id
-        LEFT JOIN departments
-        ON roles.department_id = departments.id
-        LEFT JOIN employees e
-        ON employees.manager_id = e.id
-    `
-    connection.query(queryString, function(err, resp) {
-        switch (functionFlag) {
-            case "viewEmployees":
-                console.table(resp);
-                break;
-            case "updateRole":
-                queryAllRoles("updateRole", resp);
-                break;
-
-        }
-    });
-};
-
+//--------------------------------------------------UPDATE EMPLOYEE ROLE
 function updateEmployee(flag, employeesList, rolesList) {
     var employeeNames = employeesList.map(element => {
         return element.name
@@ -267,8 +218,83 @@ function updateEmployee(flag, employeesList, rolesList) {
         connection.query(`UPDATE employees SET role_id=${roleId} WHERE id=${employeeId}`, function(err, response) {
             if(err) throw err;
             console.log(response);
-        })
+        });
+        stopProgram();
+
     }).catch(function(err){
         if(err) throw err;
     })
-}
+};
+
+//--------------------------------------- querys of database
+function queryAllMangers(roles) {
+    connection.query("SELECT * FROM roles WHERE title='manager'", function(err, res){
+        if(err) throw err;
+        connection.query(`SELECT * FROM employees WHERE role_id=${res[0].id}`, function(err, resp){
+            if(err) throw err
+            addEmployeePrompts(roles, resp);
+        });
+    })
+};
+
+function queryAllDepartments(functionFlag) {
+    connection.query("SELECT * FROM departments", function(err, res){
+        if(err) throw err;
+        switch (functionFlag) {
+            case "addRoles":
+                addRolePrompts(res);
+                break;
+            case "addEmployee":
+                queryAllMangers(res);
+                break;
+            case "viewDepartments":
+                console.table(res);
+                stopProgram();
+                break;
+        }
+    })
+};
+
+function queryAllRoles(functionFlag, employees) {
+    connection.query("SELECT roles.id, roles.title, roles.salary FROM roles", function(err, res){
+        if(err) throw err;
+        switch (functionFlag) {
+            case "addEmployee":
+                queryAllMangers(res);
+                break;
+            case "viewRoles":
+                console.table(res);
+                stopProgram();
+                break;
+            case "updateRole":
+                updateEmployee("updateRole", employees, res);
+                break;
+        }
+    })
+};
+
+function queryAllEmployees(functionFlag) {
+    var queryString = `
+        SELECT employees.id, CONCAT_WS(" ", employees.first_name, employees.last_name) AS name ,roles.title, roles.salary, departments.name AS department, CONCAT_WS(" ", e.first_name, e.last_name) AS manager
+        FROM employees
+        INNER JOIN roles
+        ON employees.role_id = roles.id
+        LEFT JOIN departments
+        ON roles.department_id = departments.id
+        LEFT JOIN employees e
+        ON employees.manager_id = e.id
+    `
+    connection.query(queryString, function(err, resp) {
+        switch (functionFlag) {
+            case "viewEmployees":
+                console.table(resp);
+                stopProgram();
+                break;
+            case "updateRole":
+                queryAllRoles("updateRole", resp);
+                break;
+
+        }
+    });
+};
+

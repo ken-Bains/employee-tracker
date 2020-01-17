@@ -24,7 +24,7 @@ function startPrompts() {
             type: "list",
             name: "openingPromptAction",
             message: "what Would you like to do?",
-            choices: ["Add Department", "Add Role", "Add Employee", "View all employees", "View all roles", "View all departments", "Update Employees Role"]
+            choices: ["Add Department", "Add Role", "Add Employee", "View all employees", "View all roles", "View all departments", "Update employees role", "Update employees manager", "Delete department"]
 
         }
     ]).then(function(res){
@@ -47,8 +47,14 @@ function startPrompts() {
             case "View all departments":
                 queryAllDepartments("viewDepartments");
                 break;
-            case "Update Employees Role":
+            case "Update employees role":
                 queryAllEmployees("updateRole")
+                break;
+            case "Update employees manager":
+                queryAllEmployees("updateManager")
+                break;
+            case "Delete department":
+                queryAllDepartments("deleteDepartment");
                 break;
 
         }
@@ -131,6 +137,7 @@ function addRolePrompts(choicesArray) {
 function addEmployeePrompts(roles, managers) {
     let rolesArray = roles.map(element => {return element.title});
     let managersArray = managers.map(element => {return `${element.first_name} ${element.last_name}`});
+    managersArray.unshift("none");
 
     inquirer.prompt([
         {
@@ -162,7 +169,9 @@ function addEmployeePrompts(roles, managers) {
         managers.forEach(element => {
             if(`${element.first_name} ${element.last_name}` === res.employeesManager) {
                 managerId = element.id
-            } 
+            } else {
+                managerId = null;
+            }
         });
         roles.forEach(element => {
             if(element.title === res.employeesRole) {
@@ -181,14 +190,27 @@ function addEmployeePrompts(roles, managers) {
     }).catch(err => console.error(err ,"ssa"));
 }
 
-//--------------------------------------------------UPDATE EMPLOYEE ROLE
+//--------------------------------------------------UPDATE EMPLOYEE ROLE/MANAGER
 function updateEmployee(flag, employeesList, rolesList) {
+    var rolesArray;
+    var promptName = "role";
+    
     var employeeNames = employeesList.map(element => {
         return element.name
     });
-    var rolesArray = rolesList.map(element => {
-        return element.title
-    });
+
+    if(flag === "updateManager") {
+        promptName = "manager";
+        rolesArray = rolesList.map(element => {
+            var str = `${element.first_name} ${element.last_name}`;
+            return str
+        });
+    } else {
+        rolesArray = rolesList.map(element => {
+            return element.title
+        });
+    }
+
     inquirer.prompt([
         {
             name: "employeeProfile",
@@ -198,26 +220,38 @@ function updateEmployee(flag, employeesList, rolesList) {
         },
         {
             name: "rolesProfile",
-            message: "What is the employees new role?",
+            message: `What is the employees new ${promptName}?`,
             type: "rawlist",
             choices: rolesArray
         }
     ]).then(function(resp) {
         var employeeId;
         var roleId;
+        var queryName; 
+
+        if(flag === "updateManager") {
+            rolesList.forEach(element => {
+                var str = `${element.first_name} ${element.last_name}`;
+                if(str === resp.rolesProfile){
+                    roleId = element.id;
+                }
+            });
+            queryName = "manager_id"    
+        } else {
+            rolesList.forEach(element => {
+                if(element.title === resp.rolesProfile){
+                    roleId = element.id;
+                }
+            });
+            queryName = "role_id"    
+        }
         employeesList.forEach(element => {
             if(element.name === resp.employeeProfile){
                 employeeId = element.id;
             }
         });
-        rolesList.forEach(element => {
-            if(element.title === resp.rolesProfile){
-                roleId = element.id;
-            }
-        });
-        connection.query(`UPDATE employees SET role_id=${roleId} WHERE id=${employeeId}`, function(err, response) {
+        connection.query(`UPDATE employees SET ${queryName}=${roleId} WHERE id=${employeeId}`, function(err, response) {
             if(err) throw err;
-            console.log(response);
         });
         stopProgram();
 
@@ -227,13 +261,14 @@ function updateEmployee(flag, employeesList, rolesList) {
 };
 
 //--------------------------------------- querys of database
-function queryAllMangers(roles) {
-    connection.query("SELECT * FROM roles WHERE title='manager'", function(err, res){
+function queryAllMangers(flag, arrays) {
+    connection.query("SELECT * FROM employees WHERE employees.manager_id IS NULL", function(err, res){
         if(err) throw err;
-        connection.query(`SELECT * FROM employees WHERE role_id=${res[0].id}`, function(err, resp){
-            if(err) throw err
-            addEmployeePrompts(roles, resp);
-        });
+        if(flag === "updateManager") {
+            updateEmployee("updateManager", arrays, res)
+        } else{
+            addEmployeePrompts(arrays, res);
+        }
     })
 };
 
@@ -251,6 +286,9 @@ function queryAllDepartments(functionFlag) {
                 console.table(res);
                 stopProgram();
                 break;
+            case "deleteDepartment":
+                deleteDepartment(res);
+                break;
         }
     })
 };
@@ -260,7 +298,7 @@ function queryAllRoles(functionFlag, employees) {
         if(err) throw err;
         switch (functionFlag) {
             case "addEmployee":
-                queryAllMangers(res);
+                queryAllMangers("updateRoles", res);
                 break;
             case "viewRoles":
                 console.table(res);
@@ -293,8 +331,15 @@ function queryAllEmployees(functionFlag) {
             case "updateRole":
                 queryAllRoles("updateRole", resp);
                 break;
+            case "updateManager":
+                queryAllMangers("updateManager", resp);
+                break;
 
         }
     });
 };
 
+//--------------------------------------------------------------DELETE DEPARTMENT
+function deleteDepartment(departments) {
+    console.log("delete departments");
+}

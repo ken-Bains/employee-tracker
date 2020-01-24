@@ -151,16 +151,16 @@ function addEmployeePrompts(roles, managers) {
             message: "What is the employees last name?"
         },
         {
-            name: "employeesManager",
-            type: "list",
-            message: "Who is the employees manager?",
-            choices: managersArray
-        },
-        {
             name: "employeesRole",
             type: "list",
             message: "What is the employees role?",
             choices: rolesArray
+        },
+        {
+            name: "employeesManager",
+            type: "list",
+            message: "Who is the employees manager?",
+            choices: managersArray
         }
     ]).then(function(res) {
         let managerId;
@@ -187,7 +187,7 @@ function addEmployeePrompts(roles, managers) {
         });
         stopProgram();
 
-    }).catch(err => console.error(err ,"ssa"));
+    }).catch(err => console.error(err));
 }
 
 //--------------------------------------------------UPDATE EMPLOYEE ROLE/MANAGER
@@ -341,5 +341,18 @@ function queryAllEmployees(functionFlag) {
 
 //--------------------------------------------------------------DELETE DEPARTMENT
 function deleteDepartment(departments) {
-    console.log("delete departments");
+
+    inquirer.prompt({
+        name: "departmentChoice",
+        type: "list",
+        message: "which department would you like to remove?",
+        choices: departments
+    }).then(function(res) {
+        var departmentId = departments.find(element => {
+            return element.name === res.departmentChoice
+        });
+        connection
+    }).catch(function(err){
+        if(err) throw err;
+    })
 }
